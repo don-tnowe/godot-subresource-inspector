@@ -3,6 +3,7 @@ extends EditorPlugin
 
 var subresource_inspect_button : Button
 var subresource_tree : Tree
+var favorites_button : OptionButton
 
 var locked_by_tree_selection := false
 var object_pinned := false
@@ -35,15 +36,25 @@ func _enter_tree():
 
 	var all_box := VBoxContainer.new()
 	var buttons_box := HBoxContainer.new()
-	var pin_button := Button.new()
 	subresources_popup.add_child(all_box)
 	all_box.add_child(buttons_box)
-	buttons_box.add_child(pin_button)
 
+	var pin_button := Button.new()
+	buttons_box.add_child(pin_button)
 	pin_button.toggle_mode = true
 	pin_button.tooltip_text = "Pin inspected object"
 	pin_button.icon = subresource_inspect_button.get_theme_icon(&"Pin", &"EditorIcons")
 	pin_button.toggled.connect(_on_pin_toggled)
+
+	favorites_button = OptionButton.new()
+	buttons_box.add_child(favorites_button)
+	favorites_button.tooltip_text = "Favorite Resources"
+	favorites_button.text = ""
+	favorites_button.icon = subresource_inspect_button.get_theme_icon(&"Favorites", &"EditorIcons")
+	favorites_button.item_selected.connect(_on_favorite_selected)
+	favorites_button.allow_reselect = true
+	favorites_button.pressed.connect(_on_favorite_pressed)
+	favorites_button.get_popup().hide_on_checkable_item_selection = false
 
 	subresource_tree = Tree.new()
 	subresource_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -161,6 +172,56 @@ func _on_tree_item_selected():
 
 func _on_pin_toggled(new_state : bool):
 	object_pinned = new_state
+
+
+func _on_favorite_pressed():
+	var f_popup := favorites_button.get_popup()
+	var favorites_list := ProjectSettings.get_setting("addons/subresource_inspector/favorite_resources", [])
+	var editing_object := get_editor_interface().get_inspector().get_edited_object()
+	f_popup.clear()
+	f_popup.add_item("Favourite Resources", 9001)
+	f_popup.set_item_disabled(0, true)
+	if !editing_object is Resource:
+		f_popup.add_check_item("This Object isn't a Resource!", 9000)
+		f_popup.set_item_disabled(1, true)
+
+	elif editing_object.resource_path.find("::") != -1:
+		f_popup.add_check_item("Resource isn't a separate file!", 9000)
+		f_popup.set_item_disabled(1, true)
+
+	else:
+		f_popup.add_check_item(editing_object.resource_path.get_file().get_basename().capitalize() if editing_object.resource_name.is_empty() else editing_object.resource_name, 9000)
+		f_popup.set_item_checked(1, favorites_list.has(editing_object.resource_path))
+		f_popup.set_item_disabled(1, false)
+
+	f_popup.add_separator("", 9001)
+	for i in favorites_list.size():
+		var cur_res = load(favorites_list[i])
+		f_popup.add_item(cur_res.resource_path.get_file().get_basename().capitalize() if cur_res.resource_name.is_empty() else cur_res.resource_name, i)
+
+	f_popup.size = Vector2.ZERO
+
+
+func _on_favorite_selected(item_index : int):
+	var f_popup := favorites_button.get_popup()
+	favorites_button.text = ""
+	favorites_button.icon = subresource_inspect_button.get_theme_icon(&"Favorites", &"EditorIcons")
+	var favorites_list := ProjectSettings.get_setting("addons/subresource_inspector/favorite_resources", [])
+	if item_index == 1:
+		var editing_object := get_editor_interface().get_inspector().get_edited_object()
+		if favorites_list.has(editing_object.resource_path):
+			favorites_list.erase(editing_object.resource_path)
+			f_popup.set_item_checked(1, false)
+
+		else:
+			favorites_list.append(editing_object.resource_path)
+			f_popup.set_item_checked(1, true)
+
+		ProjectSettings.set_setting("addons/subresource_inspector/favorite_resources", favorites_list)
+		_on_favorite_pressed()
+
+	else:
+		get_editor_interface().edit_resource(load(favorites_list[f_popup.get_item_id(item_index)]))
 
 
 func _exit_tree():
