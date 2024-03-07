@@ -73,7 +73,7 @@ func _on_button_toggled(new_state : bool = subresource_inspect_button.get_child(
 		subresource_tree.clear()
 		var edited_object := get_editor_interface().get_inspector().get_edited_object()
 		var root_item := subresource_tree.create_item()
-		root_item.set_text(0, "ROOT: " (edited_object.name if edited_object is Node else edited_object.resource_path))
+		root_item.set_text(0, "ROOT: " + (edited_object.name if edited_object is Node else edited_object.resource_path))
 		fill_subresource_subtree(edited_object, root_item)
 
 
