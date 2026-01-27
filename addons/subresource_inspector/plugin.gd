@@ -11,8 +11,13 @@ var object_pinned := false
 
 func _enter_tree():
 	subresource_inspect_button = Button.new()
+	var inspector_button_box : Control
+	if get_editor_interface().get_inspector().get_parent() is MarginContainer:
+		inspector_button_box = get_editor_interface().get_inspector().get_parent().get_parent().get_child(0)
 
-	var inspector_button_box := get_editor_interface().get_inspector().get_parent().get_child(0)
+	else:
+		inspector_button_box = get_editor_interface().get_inspector().get_parent().get_child(0)
+
 	inspector_button_box.add_child(subresource_inspect_button)
 	inspector_button_box.move_child(subresource_inspect_button, 0)
 
